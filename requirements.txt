@@ -11,3 +11,4 @@ chromadb
 pypdf
 sentence-transformers
 python-multipart
+streamlit
