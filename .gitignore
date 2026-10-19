@@ -1,0 +1,40 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Conda and tool caches
+.ipynb_checkpoints/
+
+# Private uploaded documents
+documents/
+*.pdf
+
+# ChromaDB generated data
+vectorstore/
+
+# Logs
+*.log
+
+# Local database exports and backups
+*.sql
+*.sqlite3
+*.db
+
+# IDE settings
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
