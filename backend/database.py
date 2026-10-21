@@ -6,7 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
-load_dotenv()
+ENV_FILE = os.getenv("AIDOC_ENV_FILE", ".env")
+load_dotenv(ENV_FILE)
 
 
 MYSQL_HOST = os.getenv("MYSQL_HOST")
