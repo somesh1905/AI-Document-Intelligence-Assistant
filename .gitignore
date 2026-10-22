@@ -19,6 +19,7 @@ env/
 # Private uploaded documents
 documents/
 *.pdf
+!demo_data/enterprise_ai_test_document.pdf
 
 # ChromaDB generated data
 vectorstore/
