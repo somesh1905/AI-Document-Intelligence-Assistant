@@ -6,9 +6,7 @@ sqlalchemy
 pymysql
 langchain
 langchain-groq
-langchain-chroma
-chromadb
 pypdf
-sentence-transformers
 python-multipart
 streamlit
+qdrant-client[fastembed]
