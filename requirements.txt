@@ -10,3 +10,4 @@ pypdf
 python-multipart
 streamlit
 qdrant-client[fastembed]
+langchain-text-splitters
