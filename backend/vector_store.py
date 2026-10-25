@@ -25,6 +25,7 @@ client = QdrantClient(
 )
 
 
+
 def initialize_collection():
     if not client.collection_exists(COLLECTION_NAME):
         client.create_collection(
@@ -37,6 +38,16 @@ def initialize_collection():
         print("Created Qdrant collection:", COLLECTION_NAME)
     else:
         print("Qdrant collection already exists:", COLLECTION_NAME)
+
+    # Create the index required for document deletion filters.
+    client.create_payload_index(
+        collection_name=COLLECTION_NAME,
+        field_name="document_id",
+        field_schema=models.PayloadSchemaType.INTEGER,
+        wait=True,
+    )
+
+    print("Qdrant document_id index is ready.")
 
 
 initialize_collection()
