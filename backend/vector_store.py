@@ -2,9 +2,11 @@ import os
 from uuid import uuid5, NAMESPACE_URL
 
 from dotenv import load_dotenv
+from pathlib import Path
 from qdrant_client import QdrantClient, models
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env.tidb")
 
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
@@ -39,7 +41,7 @@ def initialize_collection():
     else:
         print("Qdrant collection already exists:", COLLECTION_NAME)
 
-    # Create the index required for document deletion filters.
+        # Create the index required for document deletion filters.
     client.create_payload_index(
         collection_name=COLLECTION_NAME,
         field_name="document_id",
@@ -49,11 +51,21 @@ def initialize_collection():
 
     print("Qdrant document_id index is ready.")
 
+    # Create the index required for user-based filtering.
+    client.create_payload_index(
+        collection_name=COLLECTION_NAME,
+        field_name="user_id",
+        field_schema=models.PayloadSchemaType.INTEGER,
+        wait=True,
+    )
+
+    print("Qdrant user_id index is ready.")
+
 
 initialize_collection()
 
 
-def add_document_chunks(chunks, document_id, filename):
+def add_document_chunks(chunks, document_id, filename, user_id):
     if not chunks:
         print("No chunks to add.")
         return
@@ -77,6 +89,7 @@ def add_document_chunks(chunks, document_id, filename):
                 ),
                 payload={
                     "document_id": int(document_id),
+                    "user_id": int(user_id),
                     "filename": filename,
                     "chunk_index": i,
                     "text": chunk,
@@ -93,16 +106,24 @@ def add_document_chunks(chunks, document_id, filename):
     print(f"Added {len(points)} chunks to Qdrant Cloud.")
 
 
-def search_documents(query, top_k=5):
+def search_documents(query, user_id, top_k=5):
     results = client.query_points(
-        collection_name=COLLECTION_NAME,
-        query=models.Document(
-            text=query,
-            model=EMBEDDING_MODEL,
-        ),
-        limit=top_k,
-        with_payload=True,
-    )
+    collection_name=COLLECTION_NAME,
+    query=models.Document(
+        text=query,
+        model=EMBEDDING_MODEL,
+    ),
+    query_filter=models.Filter(
+        must=[
+            models.FieldCondition(
+                key="user_id",
+                match=models.MatchValue(value=int(user_id)),
+            )
+        ]
+    ),
+    limit=top_k,
+    with_payload=True,
+)
 
     points = results.points
 
@@ -127,7 +148,7 @@ def search_documents(query, top_k=5):
     }
 
 
-def delete_document_chunks(document_id):
+def delete_document_chunks(document_id, user_id):
     result = client.delete(
         collection_name=COLLECTION_NAME,
         points_selector=models.FilterSelector(
@@ -138,14 +159,24 @@ def delete_document_chunks(document_id):
                         match=models.MatchValue(
                             value=int(document_id)
                         ),
-                    )
+                    ),
+                    models.FieldCondition(
+                        key="user_id",
+                        match=models.MatchValue(
+                            value=int(user_id)
+                        ),
+                    ),
                 ]
             )
         ),
         wait=True,
     )
 
-    print(f"Requested deletion of chunks for document {document_id}.")
+    print(
+        f"Requested deletion of chunks for document "
+        f"{document_id}, user {user_id}."
+    )
+
     return result
 
 

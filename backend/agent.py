@@ -3,13 +3,36 @@ from backend.database import SessionLocal
 from backend.models import Document, ChatHistory
 from backend.llm import generate_response
 
-def document_search_tool(query):
+def document_search_tool(query, user_id):
     """
-    Search enterprise documents and return the
-    most relevant document chunks with clean sources.
+    Search only the logged-in user's enterprise documents.
     """
 
-    results = search_documents(query, top_k=10)
+    # First, check whether this user has uploaded any documents.
+    db = SessionLocal()
+
+    try:
+        user_document_count = (
+            db.query(Document)
+            .filter(Document.user_id == user_id)
+            .count()
+        )
+    finally:
+        db.close()
+
+    # Skip Qdrant if the user has no documents.
+    if user_document_count == 0:
+        return {
+            "status": "no_results",
+            "message": "You have not uploaded any documents yet. Please upload a PDF first."
+        }
+
+    # Search only this user's documents.
+    results = search_documents(
+        query,
+        user_id=user_id,
+        top_k=10
+    )
 
     documents = results.get("documents", [[]])[0]
     metadatas = results.get("metadatas", [[]])[0]
@@ -18,7 +41,7 @@ def document_search_tool(query):
     if not documents:
         return {
             "status": "no_results",
-            "message": "No relevant documents found."
+            "message": "No relevant documents found in your uploaded documents."
         }
 
     retrieved_chunks = []
@@ -88,25 +111,22 @@ def document_search_tool(query):
     }
 
 
-def document_list_tool():
+def document_list_tool(user_id):
     """
-    Get all uploaded documents from MySQL.
+    Get uploaded documents belonging to the specified user.
     """
 
     db = SessionLocal()
 
     try:
-
         documents = (
             db.query(Document)
-            .order_by(
-                Document.uploaded_at.desc()
-            )
+            .filter(Document.user_id == user_id)
+            .order_by(Document.uploaded_at.desc())
             .all()
         )
 
         if not documents:
-
             return {
                 "status": "no_documents",
                 "message": "No documents are uploaded."
@@ -115,16 +135,11 @@ def document_list_tool():
         document_list = []
 
         for document in documents:
-
-            document_list.append(
-                {
-                    "document_id": document.id,
-                    "filename": document.filename,
-                    "uploaded_at": str(
-                        document.uploaded_at
-                    )
-                }
-            )
+            document_list.append({
+                "document_id": document.id,
+                "filename": document.filename,
+                "uploaded_at": str(document.uploaded_at)
+            })
 
         return {
             "status": "success",
@@ -133,36 +148,31 @@ def document_list_tool():
         }
 
     except Exception as e:
-
         return {
             "status": "error",
             "message": str(e)
         }
 
     finally:
-
         db.close()
 
-def chat_history_tool(limit=10):
+def chat_history_tool(user_id, limit=10):
     """
-    Get recent questions and answers from MySQL.
+    Get recent questions and answers belonging to the specified user.
     """
 
     db = SessionLocal()
 
     try:
-
         chats = (
             db.query(ChatHistory)
-            .order_by(
-                ChatHistory.created_at.desc()
-            )
+            .filter(ChatHistory.user_id == user_id)
+            .order_by(ChatHistory.created_at.desc())
             .limit(limit)
             .all()
         )
 
         if not chats:
-
             return {
                 "status": "no_history",
                 "message": "No chat history found."
@@ -171,17 +181,12 @@ def chat_history_tool(limit=10):
         history = []
 
         for chat in chats:
-
-            history.append(
-                {
-                    "chat_id": chat.id,
-                    "question": chat.question,
-                    "answer": chat.answer,
-                    "created_at": str(
-                        chat.created_at
-                    )
-                }
-            )
+            history.append({
+                "chat_id": chat.id,
+                "question": chat.question,
+                "answer": chat.answer,
+                "created_at": str(chat.created_at)
+            })
 
         return {
             "status": "success",
@@ -190,14 +195,12 @@ def chat_history_tool(limit=10):
         }
 
     except Exception as e:
-
         return {
             "status": "error",
             "message": str(e)
         }
 
     finally:
-
         db.close()
 
 def decide_tool(question):
@@ -250,7 +253,7 @@ Tool:
     return "document_search"
 
 
-def run_agent(question):
+def run_agent(question, user_id):
     """
     Let the AI Agent choose a tool,
     execute it, and generate a final answer.
@@ -263,16 +266,17 @@ def run_agent(question):
     if selected_tool == "document_search":
 
         tool_result = document_search_tool(
-            question
+            question,
+            user_id
         )
 
     elif selected_tool == "document_list":
 
-        tool_result = document_list_tool()
+        tool_result = document_list_tool(user_id)
 
     elif selected_tool == "chat_history":
 
-        tool_result = chat_history_tool()
+        tool_result = chat_history_tool(user_id)
 
     else:
 
@@ -346,42 +350,27 @@ if __name__ == "__main__":
     print("Testing AI Agent Tools...")
     print("========================================")
 
-    print("\n1. Testing Document Search Tool")
-    print("----------------------------------------")
+    # Use an existing test user's ID from your MySQL users table.
+    test_user_id = 1
 
+    print("\n1. Testing Document Search Tool")
     question = "What are the working hours?"
 
     result = document_search_tool(
-        question
+        question,
+        test_user_id
     )
-
-    print("\nSearch Question:")
-    print(question)
-
-    print("\nSearch Result:")
     print(result)
 
-    print("\n\n2. Testing Document List Tool")
-    print("----------------------------------------")
-
-    documents = document_list_tool()
-
-    print("\nDocument List:")
+    print("\n2. Testing Document List Tool")
+    documents = document_list_tool(test_user_id)
     print(documents)
 
-    print("\n\n3. Testing Chat History Tool")
-    print("----------------------------------------")
-
-    history = chat_history_tool()
-
-    print("\nChat History:")
+    print("\n3. Testing Chat History Tool")
+    history = chat_history_tool(test_user_id)
     print(history)
-    
 
-    print("\nAI Agent tools test completed!")
-    
-    print("\n\n4. Testing AI Agent Decision Making")
-    print("----------------------------------------")
+    print("\n4. Testing AI Agent Decision Making")
 
     test_questions = [
         "What are the working hours?",
@@ -390,33 +379,20 @@ if __name__ == "__main__":
     ]
 
     for question in test_questions:
+        decision = decide_tool(question)
+        print("\nQuestion:", question)
+        print("Selected Tool:", decision)
 
-        decision = decide_tool(
-            question
-        )
-
-        print("\nQuestion:")
-        print(question)
-
-        print("Selected Tool:")
-        print(decision)
-
-    print("\nAI Agent decision test completed!")
-
-    print("\n\n5. Testing Complete AI Agent")
-    print("----------------------------------------")
+    print("\n5. Testing Complete AI Agent")
 
     agent_question = "What are the working hours?"
 
     agent_result = run_agent(
-        agent_question
+        agent_question,
+        test_user_id
     )
 
-    print("\nUser Question:")
-    print(agent_question)
-
     print("\nAI Agent Answer:")
-    print("----------------------------------------")
     print(agent_result.get("answer"))
 
     print("\nSelected Tool:")
