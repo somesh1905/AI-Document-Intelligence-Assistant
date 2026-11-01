@@ -482,9 +482,16 @@ def get_chat_history(
                 for chat in chats
             ]
         }
+    except Exception as e:
+        import traceback
+        
+        print("========== DOCUMENT UPLOAD ERROR ==========", flush=True)
+        traceback.print_exc()
+        print(f"UPLOAD ERROR: {repr(e)}", flush=True)
+        print("============================================", flush=True)
 
-    except Exception:
         db.rollback()
+
         raise HTTPException(
             status_code=500,
             detail="Failed to retrieve your chat history."
