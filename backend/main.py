@@ -387,9 +387,15 @@ def get_documents(
             ]
         }
 
-    except Exception:
-        db.rollback()
-        raise HTTPException(
+    except Exception as e:
+           import traceback
+
+           print("========== DOCUMENT UPLOAD ERROR ==========")
+           traceback.print_exc()
+           print("============================================")
+
+           db.rollback()
+           raise HTTPException(
             status_code=500,
             detail="Failed to retrieve your documents."
         )
