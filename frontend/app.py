@@ -363,6 +363,75 @@ with st.sidebar:
     # -----------------------------------
 
     st.markdown("### 📊 Document Dashboard")
+    
+    
+    # -----------------------------------
+    # UPLOAD DOCUMENT
+    # -----------------------------------
+
+    st.markdown("#### 📤 Upload New Document")
+
+    uploaded_file = st.file_uploader(
+        "Choose a PDF document",
+        type=["pdf"],
+        key="document_uploader"
+    )
+
+    if st.button(
+        "Upload Document",
+        use_container_width=True,
+        disabled=uploaded_file is None
+    ):
+
+        try:
+            with st.spinner("Uploading and processing your PDF..."):
+
+                upload_response = requests.post(
+                    f"{API_URL}/upload",
+                    headers=get_auth_headers(),
+                    files={
+                        "file": (
+                            uploaded_file.name,
+                            uploaded_file.getvalue(),
+                            "application/pdf"
+                        )
+                    },
+                    timeout=120
+                )
+
+            if upload_response.status_code in (200, 201):
+
+                st.success("Document uploaded successfully!")
+
+                st.json(upload_response.json())
+
+                st.rerun()
+
+            elif upload_response.status_code == 401:
+
+                st.error("Session expired. Please log in again.")
+
+                st.session_state.access_token = None
+                st.session_state.user = None
+
+                st.rerun()
+
+            else:
+
+                try:
+                    error = upload_response.json().get(
+                        "detail",
+                        "Document upload failed."
+                    )
+                except ValueError:
+                    error = "Document upload failed."
+
+                st.error(error)
+
+        except requests.RequestException as e:
+
+            st.error(f"Could not connect to the server: {e}")
+
 
     try:
 
@@ -847,7 +916,7 @@ if question:
                     timeout=120
                 )
 
-                if response.status_code == 200:
+                if response.status_code in (200, 201):
 
                     result = response.json()
 
