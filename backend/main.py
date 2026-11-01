@@ -389,6 +389,8 @@ def get_documents(
 
     except Exception as e:
            import traceback
+           traceback.print_exc()
+           print(f"UPLOAD ERROR: {repr(e)}", flush=True)
 
            print("========== DOCUMENT UPLOAD ERROR ==========")
            traceback.print_exc()
