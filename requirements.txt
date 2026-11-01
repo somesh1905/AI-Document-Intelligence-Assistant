@@ -12,3 +12,4 @@ streamlit
 qdrant-client[fastembed]
 langchain-text-splitters
 PyJWT
+pwdlib[argon2]
