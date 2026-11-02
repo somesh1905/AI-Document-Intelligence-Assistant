@@ -329,7 +329,12 @@ async def upload_document(
         db.rollback()
         raise
 
-    except Exception:
+    except Exception as exc:
+        import traceback
+
+        print("UPLOAD ERROR:", repr(exc))
+        traceback.print_exc()
+
         db.rollback()
 
         # Remove any Qdrant chunks created by this upload attempt.
