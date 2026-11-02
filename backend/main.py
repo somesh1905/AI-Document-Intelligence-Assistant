@@ -108,13 +108,15 @@ def ask(
             "sources": sources,
             "chat_id": chat.id,
         }
+        
+    
 
     except Exception:
-        db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to save chat history.",
-        )
+            db.rollback()
+            raise HTTPException(
+               status_code=500,
+                detail="Failed to save chat history.",
+            )
 
     finally:
         db.close()
@@ -446,7 +448,15 @@ def view_document(
     except HTTPException:
         raise
 
-    except Exception:
+    except Exception as e:
+        import traceback
+        
+        print("========== DOCUMENT UPLOAD ERROR ==========", flush=True)
+        traceback.print_exc()
+        print(f"UPLOAD ERROR: {repr(e)}", flush=True)
+        print("============================================", flush=True)
+
+        db.rollback()
         raise HTTPException(
             status_code=500,
             detail="Unable to open this document."
@@ -610,8 +620,8 @@ def delete_document(
         file_path = document.file_path
 
         deleted_chunks = delete_document_chunks(
-        document_id,
-        current_user.id
+            document_id,
+            current_user.id
         )
 
         db.delete(document)

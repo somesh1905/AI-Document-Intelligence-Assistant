@@ -401,11 +401,32 @@ with st.sidebar:
 
             if upload_response.status_code in (200, 201):
 
-                st.success("Document uploaded successfully!")
+               response_data = upload_response.json()
 
-                st.json(upload_response.json())
+               if response_data.get("status") == "duplicate":
 
-                st.rerun()
+                  st.warning("This PDF has already been uploaded.")
+
+                  st.info(
+                        f"Existing file: {response_data.get('filename')}"
+                  )
+
+               elif response_data.get("status") == "success":
+
+                   st.success("Document uploaded successfully!")
+
+                   st.json(response_data)
+
+                   st.rerun()
+
+               else:
+
+                   st.warning(
+                       response_data.get(
+                       "message",
+                        "Unexpected upload response."
+                           )
+                    )
 
             elif upload_response.status_code == 401:
 
